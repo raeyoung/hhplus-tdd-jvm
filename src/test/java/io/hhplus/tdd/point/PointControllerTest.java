@@ -1,5 +1,6 @@
 package io.hhplus.tdd.point;
 
+import io.hhplus.tdd.point.exception.UserNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,19 @@ class PointControllerTest {
 
     @MockBean
     PointService pointService;
+
+    @Test
+    @DisplayName("존재하지 않은 id 의 회원으로 포인트를 조회할 경우 예외를 리턴한다.")
+    public void getPointByNotExistUserId() throws Exception {
+        // given
+        long userId = -1L;
+
+        when(pointService.getPoint(userId)).thenThrow(UserNotFoundException.class);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/point/{userId}", userId)) // HTTP 요청을 생성 및 설정
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("에러가 발생했습니다."));
+    }
 
     @Test
     @DisplayName("특정 유저의 포인트를 조회한다.")
