@@ -1,5 +1,6 @@
 package io.hhplus.tdd.point;
 
+import io.hhplus.tdd.point.exception.UserNotFoundException;
 import io.hhplus.tdd.point.repository.PointRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,8 +11,8 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,6 +27,25 @@ class PointServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    @DisplayName("존재하지 않은 userId의 회원으로 포인트를 조회할 경우 예외를 리턴한다.")
+    public void getPointByNotExistUserId() {
+        // given
+        long userId = -1L;
+
+        when(pointService.getPoint(userId))
+                .thenThrow(new UserNotFoundException("Not found user. [id] = [" + userId + "]"));
+
+        // when & then
+        UserNotFoundException exception = assertThrows(
+                UserNotFoundException.class,
+                () -> pointService.getPoint(userId)
+        );
+
+        assertThat(exception)
+                .hasMessageContaining("Not found user. [id] = [" + userId + "]");
     }
 
     @Test

@@ -28,7 +28,7 @@ class PointControllerTest {
     PointService pointService;
 
     @Test
-    @DisplayName("존재하지 않은 id 의 회원으로 포인트를 조회할 경우 예외를 리턴한다.")
+    @DisplayName("존재하지 않은 userId의 회원으로 포인트를 조회할 경우 예외를 리턴한다.")
     public void getPointByNotExistUserId() throws Exception {
         // given
         long userId = -1L;
