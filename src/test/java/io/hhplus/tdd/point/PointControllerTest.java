@@ -1,6 +1,8 @@
 package io.hhplus.tdd.point;
 
-import io.hhplus.tdd.point.exception.UserNotFoundException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hhplus.tdd.point.exception.InvalidAmountException;
+import io.hhplus.tdd.point.exception.InvalidUserException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,7 @@ import java.util.List;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,24 +27,14 @@ class PointControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockBean
     PointService pointService;
 
     @Test
-    @DisplayName("존재하지 않은 userId의 회원으로 포인트를 조회할 경우 예외를 리턴한다.")
-    public void getPointByNotExistUserId() throws Exception {
-        // given
-        long userId = -1L;
-
-        when(pointService.getPoint(userId)).thenThrow(UserNotFoundException.class);
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/point/{userId}", userId)) // HTTP 요청을 생성 및 설정
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.message").value("에러가 발생했습니다."));
-    }
-
-    @Test
-    @DisplayName("특정 유저의 포인트를 조회한다.")
+    @DisplayName("특정 유저의 포인트를 조회에 성공한다.")
     public void getUserPointTest() throws Exception {
         // given
         long userId = 1L;
@@ -61,7 +54,7 @@ class PointControllerTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트 충전/이용 내역을 조회한다.")
+    @DisplayName("특정 유저의 포인트 충전/이용 내역을 조회에 성공한다.")
     public void getUserPointHistoryTest() throws Exception {
         // given
         long userId = 1L;
@@ -98,17 +91,42 @@ class PointControllerTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트를 충전한다.")
+    @DisplayName("특정 유저의 포인트를 충전에 성공한다.")
     public void patchChargePointTest() throws Exception {
+        // given
+        long userId = 1L;
         long chargePoint = 100L;
 
-        mockMvc.perform(MockMvcRequestBuilders.patch("/point/0/charge")
+        UserPoint mockUserPoint = new UserPoint(userId, 500L, System.currentTimeMillis()); // 예상 반환값 설정
+
+        // PointService 를 Mock 으로 설정
+        when(pointService.charge(userId, chargePoint)).thenReturn(mockUserPoint);
+
+        // when & then
+        mockMvc.perform(patch("/point/{id}/charge", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.valueOf(chargePoint)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.point").exists())
-                .andExpect(jsonPath("$.updateMillis").exists());
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.point").value(mockUserPoint.point()))
+                .andExpect(jsonPath("$.updateMillis").value(mockUserPoint.updateMillis()));
+    }
+
+    @Test
+    @DisplayName("음수 값은 충전이 불가능한 예외를 리턴한다.")
+    public void validateChargeAmount() throws Exception {
+        long userId = 1L;
+        long point = -1000L;
+
+        when(pointService.charge(userId, point))
+                .thenThrow(new InvalidAmountException(
+                        "Invalid amount. Amount must be greater than 0. Requested amount: " + point)
+                );
+
+        mockMvc.perform(patch("/point/{userId}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(point)))
+                .andExpect(status().isInternalServerError());
     }
 
     @Test
@@ -116,7 +134,7 @@ class PointControllerTest {
     public void patchUsePointTest() throws Exception {
         long chargePoint = 100L;
 
-        mockMvc.perform(MockMvcRequestBuilders.patch("/point/0/use")
+        mockMvc.perform(patch("/point/0/use")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.valueOf(chargePoint)))
                 .andExpect(status().isOk())

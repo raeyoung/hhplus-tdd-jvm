@@ -19,7 +19,9 @@ public class PointController {
     }
 
     /**
-     * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
+     * 특정 유저의 포인트 조회
+     * @param id
+     * @return
      */
     @GetMapping("{id}")
     public UserPoint point(
@@ -29,7 +31,9 @@ public class PointController {
     }
 
     /**
-     * TODO - 특정 유저의 포인트 충전/이용 내역을 조회하는 기능을 작성해주세요.
+     * 특정 유저의 포인트 충전/이용 내역 조회
+     * @param id
+     * @return
      */
     @GetMapping("{id}/histories")
     public List<PointHistory> history(
@@ -39,14 +43,17 @@ public class PointController {
     }
 
     /**
-     * TODO - 특정 유저의 포인트를 충전하는 기능을 작성해주세요.
+     * 특정 유저의 포인트를 충전
+     * @param id
+     * @param amount
+     * @return
      */
     @PatchMapping("{id}/charge")
     public UserPoint charge(
             @PathVariable long id,
             @RequestBody long amount
     ) {
-        return new UserPoint(0, 0, 0);
+        return pointService.charge(id, amount);
     }
 
     /**
