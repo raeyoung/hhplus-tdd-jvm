@@ -30,8 +30,7 @@ class PointServiceTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트를 조회할 경우 성공한다.")
-    public void getPointByUserIdSuccessTest() {
+    public void 특정_유저의_포인트_조회를_성공한다() {
         // given
         long userId = 1L;
         long point = 100L;
@@ -52,8 +51,21 @@ class PointServiceTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트 충전/이용 내역을 조회할 경우 성공한다.")
-    public void getUserPointHistorySuccessTest() {
+    void 유저가_존재하지_않는_경우_실패한다() {
+        // given
+        long userId = -1L;
+
+        // when & then
+        assertThrows(InvalidUserException.class, () -> {
+            pointService.getPoint(userId);
+        });
+
+        // verify
+        verify(pointRepository, never()).getPoint(anyLong());
+    }
+
+    @Test
+    public void 특정_유저의_포인트_충전_및_이용내역_조회에_성공한다() {
         // given
         long userId = 1L;
         long id1 = 1L;
@@ -88,8 +100,7 @@ class PointServiceTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트를 충전을 성공한다.")
-    void chargePointSuccessTest() {
+    void 특정_유저의_포인트_충전을_성공한다() {
         // given
         long userId = 1L;
         long chargeAmount = 100L;
@@ -106,8 +117,8 @@ class PointServiceTest {
         UserPoint result = pointService.charge(userId, chargeAmount);
 
         // then
-        assertThat(result).isNotNull();                                                 // 결과값 null 여부 확인
-        assertThat(result.id()).isEqualTo(userId);                                      // id가 기대값과 같은지 확인
+        assertThat(result).isNotNull();                                         // 결과값 null 여부 확인
+        assertThat(result.id()).isEqualTo(userId);                              // id가 기대값과 같은지 확인
         assertThat(result.point()).isEqualTo(existingPoints + chargeAmount);   // 포인트가 기대값과 같은지 확인
 
         // verify
@@ -117,8 +128,7 @@ class PointServiceTest {
     }
 
     @Test
-    @DisplayName("포인트 충전 금액이 0보다 작으면 실패한다.")
-    void chargeAmountLessThanZero() {
+    void 포인트_충전금액이_0보다_작으면_실패한다() {
         // given
         long userId = 1L;
         long chargeAmount = -100L; // 충전 금액이 음수일 경우
@@ -130,8 +140,7 @@ class PointServiceTest {
     }
 
     @Test
-    @DisplayName("총 포인트가 10,000,000을 초과하면 실패한다.")
-    void totalPointsExceedsLimit() {
+    void 총_포인트가_10_000_000을_초과하면_실패한다() {
         // given
         long userId = 1L;
         long currentPoints = 9_900_000L; // 현재 포인트가 9,900,000일 때
@@ -151,8 +160,7 @@ class PointServiceTest {
     }
 
     @Test
-    @DisplayName("1회 충전 금액이 1,000,000을 초과하면 실패한다.")
-    void chargePointExceedsLimit() {
+    void 포인트_1회_충전금액이_1_000_000을_초과하면_실패한다() {
         // given
         long userId = 1L;
         long currentPoints = 500_000L;  // 현재 포인트가 500,000일 때
@@ -170,8 +178,7 @@ class PointServiceTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트를 사용을 성공한다.")
-    public void usePointTest() {
+    public void 특정_유저의_포인트를_사용을_성공한다() {
         // Given
         long userId = 1L;
         long usePoint = 100L;           // 사용할 포인트
@@ -181,10 +188,10 @@ class PointServiceTest {
         UserPoint mockUserPoint = new UserPoint(userId, totalPoint, System.currentTimeMillis());
         UserPoint updatedUserPoint = new UserPoint(userId, remainingPoint, System.currentTimeMillis());
 
+        // When
         when(pointRepository.getPoint(userId)).thenReturn(mockUserPoint);
         when(pointRepository.insertOrUpdate(userId, remainingPoint)).thenReturn(updatedUserPoint);
 
-        // When
         UserPoint result = pointService.use(userId, usePoint);
 
         // Then
@@ -192,13 +199,13 @@ class PointServiceTest {
         assertThat(result.id()).isEqualTo(userId);              // id가 기대값과 같은지 확인
         assertThat(result.point()).isEqualTo(remainingPoint);   // 포인트가 기대값과 같은지 확인
 
+        // verify
         verify(pointRepository).getPoint(userId);
         verify(pointRepository).insertOrUpdate(userId, remainingPoint);
     }
 
     @Test
-    @DisplayName("사용할 포인트가 유효하지 않을 경우 실패한다.")
-    public void useAmountLessThanZero() {
+    public void 사용할_포인트가_유효하지_않을_경우_실패한다() {
         // given
         long userId = 1L;
         long point = -1000L;
@@ -215,12 +222,10 @@ class PointServiceTest {
     }
 
     @Test
-    @DisplayName("포인트 잔액이 부족할 경우 포인트 사용이 실패한다.")
-    public void useWhenInsufficientPoints() {
+    public void 포인트_잔액이_부족할_경우_포인트_사용이_실패한다() {
         // Given
         long userId = 1L;
         long point = 1000L;
-        long remainingPoint = 500L - point;
 
         // 현재 포인트는 500으로 설정
         UserPoint currentUserPoint = new UserPoint(userId, 500L, System.currentTimeMillis());
@@ -231,6 +236,7 @@ class PointServiceTest {
             pointService.use(userId, point);
         });
 
+        // verify
         verify(pointRepository, never()).insertOrUpdate(anyLong(), anyLong());
     }
 }

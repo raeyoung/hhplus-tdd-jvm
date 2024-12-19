@@ -35,8 +35,7 @@ class PointControllerTest {
     PointService pointService;
 
     @Test
-    @DisplayName("특정 유저의 포인트를 조회에 성공한다.")
-    public void getUserPointTest() throws Exception {
+    public void 특정_유저의_포인트_조회에_성공한다() throws Exception {
         // given
         long userId = 1L;
 
@@ -56,8 +55,7 @@ class PointControllerTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트 충전/이용 내역을 조회에 성공한다.")
-    public void getUserPointHistoryTest() throws Exception {
+    public void 특정_유저의_포인트_충전_및_이용내역_조회에_성공한다() throws Exception {
         // given
         long userId = 1L;
         long id1 = 1L;
@@ -94,8 +92,7 @@ class PointControllerTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트를 충전에 성공한다.")
-    public void patchChargePointTest() throws Exception {
+    public void 특정_유저의_포인트_충전에_성공한다() throws Exception {
         // given
         long userId = 1L;
         long chargePoint = 100L;
@@ -117,8 +114,7 @@ class PointControllerTest {
     }
 
     @Test
-    @DisplayName("음수 값은 충전이 불가능한 예외를 리턴한다.")
-    public void validateChargeAmount() throws Exception {
+    public void 음수_값을_충전할_경우_실패한다() throws Exception {
         // given
         long userId = 1L;
         long point = -1000L;
@@ -126,7 +122,7 @@ class PointControllerTest {
         // when
         when(pointService.charge(userId, point))
                 .thenThrow(new InvalidAmountException(
-                        "Invalid amount. Amount must be greater than 0. Requested amount: " + point)
+                    "Invalid amount. Amount must be greater than 0. Requested amount: " + point)
                 );
         // then
         mockMvc.perform(patch("/point/{userId}/charge", userId)
@@ -136,8 +132,7 @@ class PointControllerTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트를 사용을 성공한다.")
-    public void patchUsePointTest() throws Exception {
+    public void 특정_유저의_포인트_사용을_성공한다() throws Exception {
         // Given
         long userId = 1L;
         long usedPoint = 100L;
