@@ -59,11 +59,38 @@ public class PointService {
             if (totalPoints > 10_000_000) {
                 throw new InvalidAmountException("Total points exceed the limit of 10,000,000.");
             }
-            UserPoint userPoint = pointRepository.insertOrUpdate(getPoint.id(), getPoint.point() + point);  // 포인트 업데이트
+            UserPoint userPoint = pointRepository.insertOrUpdate(getPoint.id(), getPoint.point() + point);  // 포인트 충전
             pointRepository.insertHistory(userId, point, TransactionType.CHARGE, System.currentTimeMillis());     // 충전 내역 조회
 
             return userPoint;
+        } finally {
+            lock.unlock();  // 락 해제
+        }
+    }
 
+    public UserPoint use(long userId, long point) {
+        // 음수 여부 체크
+        if(point < 0) {
+            throw new InvalidAmountException("Invalid amount. Amount must be greater than 0. Requested amount: " + point);
+        }
+
+        // 사용자별 락을 생성 또는 조회
+        final Lock lock = userLocks.computeIfAbsent(userId, id -> new ReentrantLock(true));
+        lock.lock();    // 락 획득
+
+        try {
+            UserPoint getPoint = pointRepository.getPoint(userId);  // 포인트 조회
+            if(getPoint == null) {
+                throw new InvalidAmountException("User point not found");
+            }
+            // 잔액 체크
+            if (getPoint.point() < point) {
+                throw new InvalidAmountException("Insufficient points. Available: " + getPoint.point() + ", Requested: " + point);
+            }
+            UserPoint updatePoint = pointRepository.insertOrUpdate(getPoint.id(), getPoint.point() - point);    // 포인트 사용
+            pointRepository.insertHistory(userId, point, TransactionType.USE, System.currentTimeMillis());            // 충전 내역 조회
+
+            return updatePoint;
         } finally {
             lock.unlock();  // 락 해제
         }

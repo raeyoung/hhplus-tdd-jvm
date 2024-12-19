@@ -5,6 +5,7 @@ import io.hhplus.tdd.point.exception.InvalidAmountException;
 import io.hhplus.tdd.point.exception.InvalidUserException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -43,6 +44,7 @@ class PointControllerTest {
         UserPoint userPoint = new UserPoint(userId, 0, System.currentTimeMillis());
         when(pointService.getPoint(userId)).thenReturn(userPoint);
 
+        // then
         mockMvc.perform(MockMvcRequestBuilders.get("/point/{userId}", userId)) // HTTP 요청을 생성 및 설정
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())                           // 검증
@@ -69,6 +71,7 @@ class PointControllerTest {
 
         when(pointService.getHistory(userId)).thenReturn(historyList);
 
+        // then
         mockMvc.perform(get("/point/{userId}/histories", userId))   // HTTP 요청을 생성 및 설정
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())                 // 검증
@@ -96,13 +99,14 @@ class PointControllerTest {
         // given
         long userId = 1L;
         long chargePoint = 100L;
+        long totalPoint = 500L;
 
-        UserPoint mockUserPoint = new UserPoint(userId, 500L, System.currentTimeMillis()); // 예상 반환값 설정
+        UserPoint mockUserPoint = new UserPoint(userId, totalPoint, System.currentTimeMillis());    // 예상 반환값 설정
 
-        // PointService 를 Mock 으로 설정
+        // when
         when(pointService.charge(userId, chargePoint)).thenReturn(mockUserPoint);
 
-        // when & then
+        // then
         mockMvc.perform(patch("/point/{id}/charge", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.valueOf(chargePoint)))
@@ -115,14 +119,16 @@ class PointControllerTest {
     @Test
     @DisplayName("음수 값은 충전이 불가능한 예외를 리턴한다.")
     public void validateChargeAmount() throws Exception {
+        // given
         long userId = 1L;
         long point = -1000L;
 
+        // when
         when(pointService.charge(userId, point))
                 .thenThrow(new InvalidAmountException(
                         "Invalid amount. Amount must be greater than 0. Requested amount: " + point)
                 );
-
+        // then
         mockMvc.perform(patch("/point/{userId}/charge", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(point)))
@@ -130,16 +136,24 @@ class PointControllerTest {
     }
 
     @Test
-    @DisplayName("특정 유저의 포인트를 사용한다.")
+    @DisplayName("특정 유저의 포인트를 사용을 성공한다.")
     public void patchUsePointTest() throws Exception {
-        long chargePoint = 100L;
+        // Given
+        long userId = 1L;
+        long usedPoint = 100L;
+        long totalPoint = 1000L;
+        UserPoint mockUserPoint = new UserPoint(userId, totalPoint, System.currentTimeMillis()); // 예상 반환값 설정
 
-        mockMvc.perform(patch("/point/0/use")
+        // when
+        when(pointService.use(userId, usedPoint)).thenReturn(mockUserPoint);
+
+        // then
+        mockMvc.perform(patch("/point/{id}/use", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(String.valueOf(chargePoint)))
+                        .content(String.valueOf(usedPoint)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.point").exists())
-                .andExpect(jsonPath("$.updateMillis").exists());
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.point").value(mockUserPoint.point()))
+                .andExpect(jsonPath("$.updateMillis").value(mockUserPoint.updateMillis()));
     }
 }

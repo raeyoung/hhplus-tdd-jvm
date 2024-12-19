@@ -106,13 +106,13 @@ class PointServiceTest {
         UserPoint result = pointService.charge(userId, chargeAmount);
 
         // then
-        assertThat(result).isNotNull();                                        // 결과값 null 여부 확인
-        assertThat(result.id()).isEqualTo(userId);                             // id가 기대값과 같은지 확인
+        assertThat(result).isNotNull();                                                 // 결과값 null 여부 확인
+        assertThat(result.id()).isEqualTo(userId);                                      // id가 기대값과 같은지 확인
         assertThat(result.point()).isEqualTo(existingPoints + chargeAmount);   // 포인트가 기대값과 같은지 확인
 
         // verify
-        verify(pointRepository, times(1)).getPoint(userId);                    // getPoint 가 정확히 1번 호출되었는지 검증
-        verify(pointRepository, times(1)).insertOrUpdate(userId, existingPoints + chargeAmount); // insertOrUpdate 가 정확히 1번 호출되었는지 검증
+        verify(pointRepository, times(1)).getPoint(userId);                                                                   // getPoint 가 정확히 1번 호출되었는지 검증
+        verify(pointRepository, times(1)).insertOrUpdate(userId, existingPoints + chargeAmount);                        // insertOrUpdate 가 정확히 1번 호출되었는지 검증
         verify(pointRepository, times(1)).insertHistory(eq(userId), eq(chargeAmount), eq(TransactionType.CHARGE), anyLong()); // insertHistory 가 정확히 1번 호출되었는지 검증
     }
 
@@ -152,7 +152,7 @@ class PointServiceTest {
 
     @Test
     @DisplayName("1회 충전 금액이 1,000,000을 초과하면 실패한다.")
-    void chargeAmountExceedsLimit() {
+    void chargePointExceedsLimit() {
         // given
         long userId = 1L;
         long currentPoints = 500_000L;  // 현재 포인트가 500,000일 때
@@ -167,5 +167,70 @@ class PointServiceTest {
         assertThrows(InvalidAmountException.class, () -> {
             pointService.charge(userId, chargeAmount);
         });
+    }
+
+    @Test
+    @DisplayName("특정 유저의 포인트를 사용을 성공한다.")
+    public void usePointTest() {
+        // Given
+        long userId = 1L;
+        long usePoint = 100L;           // 사용할 포인트
+        long totalPoint = 500L;         // 사용 전 포인트
+        long remainingPoint = 400L;     // 사용 후 남은 포인트
+
+        UserPoint mockUserPoint = new UserPoint(userId, totalPoint, System.currentTimeMillis());
+        UserPoint updatedUserPoint = new UserPoint(userId, remainingPoint, System.currentTimeMillis());
+
+        when(pointRepository.getPoint(userId)).thenReturn(mockUserPoint);
+        when(pointRepository.insertOrUpdate(userId, remainingPoint)).thenReturn(updatedUserPoint);
+
+        // When
+        UserPoint result = pointService.use(userId, usePoint);
+
+        // Then
+        assertThat(result).isNotNull();                         // 결과값 null 여부 확인
+        assertThat(result.id()).isEqualTo(userId);              // id가 기대값과 같은지 확인
+        assertThat(result.point()).isEqualTo(remainingPoint);   // 포인트가 기대값과 같은지 확인
+
+        verify(pointRepository).getPoint(userId);
+        verify(pointRepository).insertOrUpdate(userId, remainingPoint);
+    }
+
+    @Test
+    @DisplayName("사용할 포인트가 유효하지 않을 경우 실패한다.")
+    public void useAmountLessThanZero() {
+        // given
+        long userId = 1L;
+        long point = -1000L;
+        UserPoint userPoint = mock(UserPoint.class);
+        when(pointRepository.getPoint(userId)).thenReturn(userPoint);
+
+        // when & then
+        assertThrows(InvalidAmountException.class, () -> {
+            pointService.use(userId, point);
+        });
+
+        // verify
+        verify(pointRepository, never()).insertOrUpdate(anyLong(), anyLong());  // insertOrUpdate 호출 여부 검증
+    }
+
+    @Test
+    @DisplayName("포인트 잔액이 부족할 경우 포인트 사용이 실패한다.")
+    public void useWhenInsufficientPoints() {
+        // Given
+        long userId = 1L;
+        long point = 1000L;
+        long remainingPoint = 500L - point;
+
+        // 현재 포인트는 500으로 설정
+        UserPoint currentUserPoint = new UserPoint(userId, 500L, System.currentTimeMillis());
+        when(pointRepository.getPoint(userId)).thenReturn(currentUserPoint);
+
+        // when & then
+        assertThrows(InvalidAmountException.class, () -> {
+            pointService.use(userId, point);
+        });
+
+        verify(pointRepository, never()).insertOrUpdate(anyLong(), anyLong());
     }
 }
