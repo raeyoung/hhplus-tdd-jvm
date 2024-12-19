@@ -107,23 +107,23 @@ class PointServiceTest {
         long existingPoints = 200L;
 
         UserPoint existingUserPoint = new UserPoint(userId, existingPoints, System.currentTimeMillis());
-        UserPoint updatedUserPoint = new UserPoint(userId, existingPoints + chargeAmount, System.currentTimeMillis());
+        UserPoint updatedUserPoint = new UserPoint(userId, 300L, System.currentTimeMillis());
 
         // Mock 설정
         when(pointRepository.getPoint(userId)).thenReturn(existingUserPoint);
-        when(pointRepository.insertOrUpdate(userId, existingPoints + chargeAmount)).thenReturn(updatedUserPoint);
+        when(pointRepository.insertOrUpdate(userId, updatedUserPoint.point())).thenReturn(updatedUserPoint);
 
         // when
         UserPoint result = pointService.charge(userId, chargeAmount);
 
         // then
-        assertThat(result).isNotNull();                                         // 결과값 null 여부 확인
-        assertThat(result.id()).isEqualTo(userId);                              // id가 기대값과 같은지 확인
-        assertThat(result.point()).isEqualTo(existingPoints + chargeAmount);   // 포인트가 기대값과 같은지 확인
+        assertThat(result).isNotNull();               // 결과값 null 여부 확인
+        assertThat(result.id()).isEqualTo(userId);    // id가 기대값과 같은지 확인
+        assertThat(result.point()).isEqualTo(300L);   // 포인트가 기대값과 같은지 확인
 
         // verify
-        verify(pointRepository, times(1)).getPoint(userId);                                                                   // getPoint 가 정확히 1번 호출되었는지 검증
-        verify(pointRepository, times(1)).insertOrUpdate(userId, existingPoints + chargeAmount);                        // insertOrUpdate 가 정확히 1번 호출되었는지 검증
+        verify(pointRepository, times(1)).getPoint(userId); // getPoint 가 정확히 1번 호출되었는지 검증
+        verify(pointRepository, times(1)).insertOrUpdate(userId, updatedUserPoint.point()); // insertOrUpdate 가 정확히 1번 호출되었는지 검증
         verify(pointRepository, times(1)).insertHistory(eq(userId), eq(chargeAmount), eq(TransactionType.CHARGE), anyLong()); // insertHistory 가 정확히 1번 호출되었는지 검증
     }
 
